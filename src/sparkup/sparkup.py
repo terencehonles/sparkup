@@ -292,6 +292,7 @@ class Parser:
         self.caret.append(self.root)
         self._last = []
 
+        self._init()
         self._tokenize()
         self._parse()
 
@@ -324,6 +325,29 @@ class Parser:
 
     # Protected methods
     # -------------------------------------------------------------------------
+
+    def _init(self):
+        """Initialize the parser.
+        """
+
+        def reindent(shortcut, newindent, indent='    '):
+            indent = len(indent)
+            for k, v in shortcut.iteritems():
+                if not k.endswith('_tag'):
+                    continue
+                newv = []
+                for line in v.splitlines():
+                    stripped = line.lstrip(' ')
+                    indents = (len(line) - len(stripped))/indent
+                    newv.append(indents * newindent + stripped)
+                shortcut[k] = '\n'.join(newv)
+
+        indent = ' ' * self.options.indent_spaces
+        shortcuts = self.dialect.shortcuts
+        for name, shortcut in shortcuts.iteritems():
+            if shortcut is None:
+                continue
+            reindent(shortcut, indent)
 
     def _textmatify(self, output):
         """Returns a version of the output with TextMate placeholders in it.
