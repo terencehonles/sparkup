@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+version = "0.1.3"
 
+import os
+import fileinput
+import getopt
 import sys
 import re
-from optparse import OptionParser
 
-VERSION = "000" # This line will be replaced in the make process.
-
-# =============================================================================
+# =============================================================================== 
 
 class Dialect:
     shortcuts = {}
@@ -36,7 +37,7 @@ class HtmlDialect(Dialect):
                 '<html lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' +
+                '    ' + '<title></title>\n' + 
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -49,7 +50,7 @@ class HtmlDialect(Dialect):
                 '<html lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' +
+                '    ' + '<title></title>\n' + 
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -62,7 +63,7 @@ class HtmlDialect(Dialect):
                 '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' +
+                '    ' + '<title></title>\n' + 
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -75,7 +76,7 @@ class HtmlDialect(Dialect):
                 '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' +
+                '    ' + '<title></title>\n' + 
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -88,7 +89,7 @@ class HtmlDialect(Dialect):
                 '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' +
+                '    ' + '<title></title>\n' + 
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -101,7 +102,7 @@ class HtmlDialect(Dialect):
                 '<html lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta charset="UTF-8" />\n' +
-                '    ' + '<title></title>\n' +
+                '    ' + '<title></title>\n' + 
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -245,7 +246,7 @@ class HtmlDialect(Dialect):
         'jssrc': 'script:src',
         }
     short_tags = (
-        'area', 'base', 'basefont', 'br', 'embed', 'hr',
+        'area', 'base', 'basefont', 'br', 'embed', 'hr', \
         'input', 'img', 'link', 'param', 'meta')
     required = {
         'a':      {'href':''},
@@ -277,14 +278,14 @@ class Parser:
     """
 
     # Constructor
-    # -------------------------------------------------------------------------
+    # --------------------------------------------------------------------------- 
 
-    def __init__(self, options, string, dialect=HtmlDialect()):
+    def __init__(self, options=None, str='', dialect=HtmlDialect()):
         """Constructor.
         """
 
         self.tokens = []
-        self.string = string
+        self.str = str
         self.options = options
         self.dialect = dialect
         self.root = Element(parser=self)
@@ -292,12 +293,16 @@ class Parser:
         self.caret.append(self.root)
         self._last = []
 
+    # Methods 
+    # --------------------------------------------------------------------------- 
+
+    def load_string(self, str):
+        """Loads a string to parse.
+        """
+
+        self.str = str
         self._tokenize()
         self._parse()
-
-
-    # Methods
-    # -------------------------------------------------------------------------
 
     def render(self):
         """Renders.
@@ -308,22 +313,22 @@ class Parser:
         output = self.root.render()
 
         # Indent by whatever the input is indented with
-        indent = re.findall(r"^[\r\n]*(\s*)", self.string)[0]
+        indent = re.findall("^[\r\n]*(\s*)", self.str)[0]
         output = indent + output.replace("\n", "\n" + indent)
 
         # Strip newline if not needed
-        if not self.options.last_newline \
+        if self.options.has("no-last-newline") \
             or self.prefix or self.suffix:
             output = re.sub(r'\n\s*$', '', output)
 
         # TextMate mode
-        if self.options.textmate:
+        if self.options.has("textmate"):
             output = self._textmatify(output)
 
         return output
 
-    # Protected methods
-    # -------------------------------------------------------------------------
+    # Protected methods 
+    # --------------------------------------------------------------------------- 
 
     def _textmatify(self, output):
         """Returns a version of the output with TextMate placeholders in it.
@@ -352,25 +357,25 @@ class Parser:
         Initializes [[self.tokens]].
         """
 
-        string = self.string.strip()
+        str = self.str.strip()
 
         # Find prefix/suffix
         while True:
-            match = re.match(r"^(\s*<[^>]+>\s*)", string)
+            match = re.match(r"^(\s*<[^>]+>\s*)", str)
             if match is None: break
             if self.prefix is None: self.prefix = ''
             self.prefix += match.group(0)
-            string = string[len(match.group(0)):]
+            str = str[len(match.group(0)):]
 
         while True:
-            match = re.findall(r"(\s*<[^>]+>[\s\n\r]*)$", string)
+            match = re.findall(r"(\s*<[^>]+>[\s\n\r]*)$", str)
             if not match: break
             if self.suffix is None: self.suffix = ''
             self.suffix = match[0] + self.suffix
-            string = string[:-len(match[0])]
+            str = str[:-len(match[0])]
 
         # Split by the element separators
-        for token in re.split('(<|>|\+(?!\\s*\+|$))', string):
+        for token in re.split('(<|>|\+(?!\\s*\+|$))', str):
             if token.strip() != '':
                 self.tokens.append(Token(token, parser=self))
 
@@ -396,8 +401,10 @@ class Parser:
                 # multiplied by how many carets we have
                 count = 0
                 for caret in self.caret:
-                    for local_count in range(1, token.multiplier + 1):
+                    local_count = 0
+                    for i in range(token.multiplier):
                         count += 1
+                        local_count += 1
                         new = Element(token, caret,
                                 count = count,
                                 local_count = local_count,
@@ -416,17 +423,18 @@ class Parser:
                 parent = self.caret[0].parent
                 if parent is not None:
                     self.caret[:] = [parent]
+        return
 
     # Properties
-    # -------------------------------------------------------------------------
+    # --------------------------------------------------------------------------- 
 
     # Property: dialect
     # The dialect of XML
     dialect = None
 
-    # Property: string
+    # Property: str
     # The string
-    string = ''
+    str = ''
 
     # Property: tokens
     # The list of tokens
@@ -438,7 +446,7 @@ class Parser:
 
     # Property: root
     # The root [[Element]] node.
-    root = None
+    root = None 
 
     # Property: caret
     # The current insertion point.
@@ -462,15 +470,16 @@ class Parser:
     # Property: suffix
     # (string) The trailing tag at the end.
     suffix = ''
+    pass
 
-# =============================================================================
+# =============================================================================== 
 
 class Element:
     """An element.
     """
 
-    def __init__(self, token=None, parent=None, count=None, local_count=None,
-                 parser=None, opening_tag=None, closing_tag=None,
+    def __init__(self, token=None, parent=None, count=None, local_count=None, \
+                 parser=None, opening_tag=None, closing_tag=None, \
                  attributes=None, name=None, text=None):
         """Constructor.
 
@@ -481,8 +490,8 @@ class Element:
 
         token       - (Token) The token (required)
         parent      - (Element) Parent element; `None` if root
-        count       - (Int) The number to substitute for `&` (e.g., in `li.item-&`)
-        local_count - (Int) The number to substitute for `$` (e.g., in `li.item-$`)
+        count       - (Int) The number to substitute for `&` (e.g., in `li.item-$`)
+        local_count - (Int) The number to substitute for `$` (e.g., in `li.item-&`)
         parser      - (Parser) The parser
 
         attributes  - ...
@@ -509,13 +518,15 @@ class Element:
         if count is not None:
             for key in self.attributes:
                 attrib = self.attributes[key]
-                attrib = attrib.replace('&', ("%i" % count))
+                attrib = self.count_pattern.sub(self.sub_count(count), attrib)
                 if local_count is not None:
-                    attrib = attrib.replace('$', ("%i" % local_count))
+                    attrib = self.local_count_pattern.sub(
+                                                self.sub_count(local_count),
+                                                attrib)
                 self.attributes[key] = attrib
 
         # Copy over from parameters
-        if attributes: self.attributes = attributes
+        if attributes: self.attributes = attribues
         if name:       self.name       = name
         if text:       self.text       = text
 
@@ -533,52 +544,46 @@ class Element:
         [Grouped under "Rendering methods"]
         """
 
-        options = self.parser.options
         output = ""
-        spaces_count = options.indent_spaces
+        try:    spaces_count = int(self.parser.options.options['indent-spaces'])
+        except: spaces_count = 4
         spaces = ' ' * spaces_count
         indent = self.depth * spaces
-
+        
         prefix, suffix = ('', '')
         if self.prefix: prefix = self.prefix + "\n"
         if self.suffix: suffix = self.suffix
 
-        # Make the guide from the ID (/#header), or the class if there's no
-        # ID (/.item)
-        # This is for the start-guide, end-guide and post_tag_guides
-        guide_string = ''
+        # Make the guide from the ID (/#header), or the class if there's no ID (/.item)
+        # This is for the start-guide, end-guide and post-tag-guides
+        guide_str = ''
         if 'id' in self.attributes:
-            guide_string += "#%s" % self.attributes['id']
+            guide_str += "#%s" % self.attributes['id']
         elif 'class' in self.attributes:
-            guide_string += ".%s" % self.attributes['class'].replace(' ', '.')
+            guide_str += ".%s" % self.attributes['class'].replace(' ', '.')
 
         # Build the post-tag guide (e.g., </div><!-- /#header -->),
         # the start guide, and the end guide.
         guide = ''
         start_guide = ''
         end_guide = ''
-
         if ((self.name == 'div') and \
             (('id' in self.attributes) or ('class' in self.attributes))):
 
-            if (options.post_tag_guides):
-                guide = "<!-- /%s -->" % guide_string
+            if (self.parser.options.has('post-tag-guides')):
+                guide = "<!-- /%s -->" % guide_str
 
-            if (options.start_guide_format):
-                format = options.start_guide_format
-                try: start_guide = format % guide_string
-                except: start_guide = (format + " " + guide_string).strip()
+            if (self.parser.options.has('start-guide-format')):
+                format = self.parser.options.get('start-guide-format')
+                try: start_guide = format % guide_str
+                except: start_guide = (format + " " + guide_str).strip()
                 start_guide = "%s<!-- %s -->\n" % (indent, start_guide)
 
-            if (options.end_guide_format):
-                format = options.end_guide_format
-                try: end_guide = format % guide_string
-                except: end_guide = (format + " " + guide_string).strip()
-
-                if options.end_guide_newline:
-                    end_guide = "\n%s<!-- %s -->" % (indent, end_guide)
-                else:
-                    end_guide = "<!-- %s -->" % (end_guide)
+            if (self.parser.options.has('end-guide-format')):
+                format = self.parser.options.get('end-guide-format')
+                try: end_guide = format % guide_str
+                except: end_guide = (format + " " + guide_str).strip()
+                end_guide = "\n%s<!-- %s -->" % (indent, end_guide)
 
         # Short, self-closing tags (<br />)
         short_tags = self.parser.dialect.short_tags
@@ -589,7 +594,7 @@ class Element:
         if  len(self.children) > 0 \
             or self.expand \
             or prefix or suffix \
-            or (self.parser.options.expand_divs and self.name == 'div'):
+            or (self.parser.options.has('expand-divs') and self.name == 'div'):
 
             for child in self.children:
                 output += child.render()
@@ -613,10 +618,10 @@ class Element:
                          output + \
                          indent + self.get_closing_tag() + \
                          guide + end_guide + "\n"
-
+            
 
         # Short, self-closing tags (<br />)
-        elif self.name in short_tags:
+        elif self.name in short_tags: 
             output = "%s<%s />\n" % (indent, self.get_default_tag())
 
         # Tags with text, possibly
@@ -628,6 +633,10 @@ class Element:
                  self.text, \
                  self.get_closing_tag(), \
                  guide, end_guide, "\n")
+
+        # Else, it's an empty-named element (like the root). Pass.
+        else: pass
+
 
         return output
 
@@ -676,8 +685,7 @@ class Element:
         self.children.append(object)
 
     def get_last_child(self):
-        """Returns the last child element which was [[append()]]ed
-        to this element.
+        """Returns the last child element which was [[append()]]ed to this element.
 
         Usage:
             element.get_last_child()
@@ -734,13 +742,20 @@ class Element:
                     if attrib not in self.attributes:
                         self.attributes[attrib] = attribs[attrib]
 
-    # -------------------------------------------------------------------------
+
+    def sub_count(self, count):
+        def replace(match):
+            return ("%0" + str(len(match.group())) + "i") % count
+
+        return replace
+
+    # ---------------------------------------------------------------------------
 
     # Property: last_child
     # [Read-only]
     last_child = property(get_last_child)
 
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 
     # Property: parent
     # (Element) The parent element.
@@ -767,6 +782,9 @@ class Element:
     # (String or None) The closing tag
     closing_tag = None
 
+    count_pattern = re.compile('&+')
+    local_count_pattern = re.compile(r'(?<!\{)\$+')
+
     text = ''
     depth = -1
     expand = False
@@ -778,42 +796,42 @@ class Element:
     prefix = None
     suffix = None
 
-# =============================================================================
+# =============================================================================== 
 
 class Token:
-    def __init__(self, string, parser=None):
+    def __init__(self, str, parser=None):
         """Token.
 
         Description:
-        string   - The string to parse
+        str   - The string to parse
 
         In the string `div > ul`, there are 3 tokens. (`div`, `>`, and `ul`)
 
         For `>`, it will be a `Token` with `type` set to `Token.CHILD`
         """
 
-        self.string = string.strip()
+        self.str = str.strip()
         self.attributes = {}
         self.parser = parser
 
         # Set the type.
-        if self.string == '<':
+        if self.str == '<':
             self.type = Token.PARENT
-        elif self.string == '>':
+        elif self.str == '>':
             self.type = Token.CHILD
-        elif self.string == '+':
+        elif self.str == '+':
             self.type = Token.SIBLING
         else:
             self.type = Token.ELEMENT
             self._init_element()
-
+        
     def _init_element(self):
         """Initializes. Only called if the token is an element token.
         [Private]
         """
 
         # Get the tag name. Default to DIV if none given.
-        name = re.findall(r'^([\w\-:]*)', self.string)[0]
+        name = re.findall('^([\w\-:]*)', self.str)[0]
         name = name.lower().replace('-', ':')
 
         # Find synonyms through this thesaurus
@@ -822,6 +840,10 @@ class Token:
             name = synonyms[name]
 
         if ':' in name:
+            try:    spaces_count = int(self.parser.options.get('indent-spaces'))
+            except: spaces_count = 4
+            indent = ' ' * spaces_count
+
             shortcuts = self.parser.dialect.shortcuts
             if name in shortcuts.keys():
                 for key, value in shortcuts[name].iteritems():
@@ -836,9 +858,9 @@ class Token:
 
         # Look for attributes
         attribs = []
-        for attrib in re.findall(r'\[([^\]]*)\]', self.string):
+        for attrib in re.findall('\[([^\]]*)\]', self.str):
             attribs.append(attrib)
-            self.string = self.string.replace("[" + attrib + "]", "")
+            self.str = self.str.replace("[" + attrib + "]", "")
         if len(attribs) > 0:
             for attrib in attribs:
                 try:    key, value = attrib.split('=', 1)
@@ -847,14 +869,14 @@ class Token:
 
         # Try looking for text
         text = None
-        for text in re.findall(r'\{([^\}]*)\}', self.string):
-            self.string = self.string.replace("{" + text + "}", "")
+        for text in re.findall('\{([^\}]*)\}', self.str):
+            self.str = self.str.replace("{" + text + "}", "")
         if text is not None:
             self.text = text
 
         # Get the class names
         classes = []
-        for classname in re.findall(r'\.([\$a-zA-Z0-9_\-\&]+)', self.string):
+        for classname in re.findall('\.([\$a-zA-Z0-9_\-\&]+)', self.str):
             classes.append(classname)
         if len(classes) > 0:
             try:    self.attributes['class']
@@ -863,27 +885,28 @@ class Token:
             self.attributes['class'] = self.attributes['class'].strip()
 
         # Get the ID
-        id_match = re.search(r'#([\$a-zA-Z0-9_\-\&]+)', self.string)
-        if id_match is not None:
-            self.attributes['id'] = id_match.group(1)
+        id = None
+        for id in re.findall('#([\$a-zA-Z0-9_\-\&]+)', self.str): pass
+        if id is not None:
+            self.attributes['id'] = id
 
         # See if there's a multiplier (e.g., "li*3")
-        multiplier_match = re.search(r'\*\s*([0-9]+)', self.string)
-        if multiplier_match is not None:
-            self.multiplier = int(multiplier_match.group(1))
+        multiplier = None
+        for multiplier in re.findall('\*\s*([0-9]+)', self.str): pass
+        if multiplier is not None:
+            self.multiplier = int(multiplier)
 
         # Populate flag (e.g., ul+)
-        flags_match = re.search(r'[\+\!]+$', self.string)
-        if flags_match is not None:
-            if '+' in flags_match.group(0):
-                self.populate = True
-            if '!' in flags_match.group(0):
-                self.expand = True
+        flags = None
+        for flags in re.findall('[\+\!]+$', self.str): pass
+        if flags is not None:
+            if '+' in flags: self.populate = True
+            if '!' in flags: self.expand = True
 
     def __str__(self):
-        return self.string
+        return self.str 
 
-    string = ''
+    str = ''
     parser = None
 
     # For elements
@@ -899,52 +922,178 @@ class Token:
 
     # Type
     type = 0
-    ELEMENT = 2
+    ELEMENT = 2 
     CHILD = 4
     PARENT = 8
     SIBLING = 16
 
-# =============================================================================
+# =============================================================================== 
 
-def parse_args():
-    optparser = OptionParser(version=VERSION,
-            description="Expands input into HTML.",
-            epilog="Please refer to the manual for more information.")
+class Router:
+    """The router.
+    """
 
+    # Constructor 
+    # --------------------------------------------------------------------------- 
 
-    optparser.add_option('--no-guides', action="store_true", help='Deprecated')
-    optparser.add_option('--post-tag-guides', action="store_true",
-            help='Adds comments at the end of DIV tags')
-    optparser.add_option('--textmate', action="store_true",
-            help='Adds snippet info (textmate mode)')
-    optparser.add_option('--indent-spaces', help='Indent spaces')
-    optparser.add_option('--expand-divs', action="store_true",
-            help='Automatically expand divs')
-    optparser.add_option('--no-last-newline', action="store_false",
-            help='Skip the trailing newline')
-    optparser.add_option('--start-guide-format', help='To be documented')
-    optparser.add_option('--end-guide-format', help='To be documented')
-    optparser.add_option('--end-guide-newline', help='To be documented')
+    def __init__(self):
+        pass
 
-    optparser.set_defaults(post_tag_guides=False, textmate=False,
-            indent_spaces=4, expand_divs=False, last_newline=True,
-            start_guide_format="", end_guide_format="", end_guide_newline=True)
+    # Methods 
+    # --------------------------------------------------------------------------- 
 
-    # Make sure they're the correct types
-    opt_args = optparser.parse_args()
-    opt_args[0].indent_spaces     = int(opt_args[0].indent_spaces)
-    opt_args[0].end_guide_newline = bool(int(opt_args[0].end_guide_newline))
-    return opt_args
+    def start(self, options=None, str=None, ret=None):
+        if (options):
+            self.options = Options(router=self, options=options, argv=None)
+        else:
+            self.options = Options(router=self, argv=sys.argv[1:], options=None)
 
-def main():
-    (options, _) = parse_args()
+        if (self.options.has('help')):
+            return self.help()
 
-    lines = sys.stdin.read()
+        elif (self.options.has('version')):
+            return self.version()
 
-    parser = Parser(options, lines)
+        else:
+            return self.parse(str=str, ret=ret)
+    
+    def help(self):
+        print "Usage: %s [OPTIONS]" % sys.argv[0]
+        print "Expands input into HTML."
+        print ""
+        for short, long, info in self.options.cmdline_keys:
+            if "Deprecated" in info: continue 
+            if not short == '': short = '-%s,' % short
+            if not long  == '': long  = '--%s' % long.replace("=", "=XXX")
 
-    output = parser.render()
-    sys.stdout.write(output)
+            print "%6s %-25s %s" % (short, long, info)
+        print ""
+        print "\n".join(self.help_content)
+
+    def version(self):
+        print "Uhm, yeah."
+
+    def parse(self, str=None, ret=None):
+        self.parser = Parser(self.options)
+
+        try:
+            # Read the files
+            # for line in fileinput.input(): lines.append(line.rstrip(os.linesep))
+            if str is not None:
+                lines = str
+            else:
+                lines = [sys.stdin.read()]
+                lines = " ".join(lines)
+
+        except KeyboardInterrupt:
+            pass
+
+        except:
+            sys.stderr.write("Reading failed.\n")
+            return
+            
+        try:
+            self.parser.load_string(lines)
+            output = self.parser.render()
+            if ret: return output
+            sys.stdout.write(output)
+
+        except:
+            sys.stderr.write("Parse error. Check your input.\n")
+            print sys.exc_info()[0]
+            print sys.exc_info()[1]
+
+    def exit(self):
+        sys.exit()
+
+    help_content = [
+        "Please refer to the manual for more information.",
+    ]
+
+# =============================================================================== 
+
+class Options:
+    def __init__(self, router, argv, options=None):
+        # Init self
+        self.router = router
+
+        # `options` can be given as a dict of stuff to preload
+        if options:
+            for k, v in options.iteritems():
+                self.options[k] = v
+            return
+
+        # Prepare for getopt()
+        short_keys, long_keys = "", []
+        for short, long, info in self.cmdline_keys: # 'v', 'version'
+            short_keys += short
+            long_keys.append(long)
+
+        try:
+            getoptions, arguments = getopt.getopt(argv, short_keys, long_keys)
+
+        except getopt.GetoptError:
+            err = sys.exc_info()[1]
+            sys.stderr.write("Options error: %s\n" % err)
+            sys.stderr.write("Try --help for a list of arguments.\n")
+            return router.exit()
+
+        # Sort them out into options
+        options = {}
+        i = 0
+        for option in getoptions:
+            key, value = option # '--version', ''
+            if (value == ''): value = True
+
+            # If the key is long, write it
+            if key[0:2] == '--':
+                clean_key = key[2:]
+                options[clean_key] = value
+
+            # If the key is short, look for the long version of it
+            elif key[0:1] == '-':
+                for short, long, info in self.cmdline_keys:
+                    if short == key[1:]:
+                        print long
+                        options[long] = True
+
+        # Done
+        for k, v in options.iteritems():
+            self.options[k] = v
+
+    def __getattr__(self, attr):
+        return self.get(attr)
+
+    def get(self, attr):
+        try:    return self.options[attr]
+        except: return None
+
+    def has(self, attr):
+        try:    return self.options.has_key(attr)
+        except: return False
+
+    options = {
+        'indent-spaces': 4
+    }
+    cmdline_keys = [
+        ('h', 'help', 'Shows help'),
+        ('v', 'version', 'Shows the version'),
+        ('', 'no-guides', 'Deprecated'),
+        ('', 'post-tag-guides', 'Adds comments at the end of DIV tags'),
+        ('', 'textmate', 'Adds snippet info (textmate mode)'),
+        ('', 'indent-spaces=', 'Indent spaces'),
+        ('', 'expand-divs', 'Automatically expand divs'),
+        ('', 'no-last-newline', 'Skip the trailing newline'),
+        ('', 'start-guide-format=', 'To be documented'),
+        ('', 'end-guide-format=', 'To be documented'),
+    ]
+    
+    # Property: router
+    # Router
+    router = 1
+
+# =============================================================================== 
 
 if __name__ == "__main__":
-    main()
+    z = Router()
+    z.start()
