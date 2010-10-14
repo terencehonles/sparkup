@@ -518,9 +518,11 @@ class Element:
         if count is not None:
             for key in self.attributes:
                 attrib = self.attributes[key]
-                attrib = attrib.replace('&', ("%i" % count))
+                attrib = self.count_pattern.sub(self.sub_count(count), attrib)
                 if local_count is not None:
-                    attrib = attrib.replace('$', ("%i" % local_count))
+                    attrib = self.local_count_pattern.sub(
+                                                self.sub_count(local_count),
+                                                attrib)
                 self.attributes[key] = attrib
 
         # Copy over from parameters
@@ -740,6 +742,13 @@ class Element:
                     if attrib not in self.attributes:
                         self.attributes[attrib] = attribs[attrib]
 
+
+    def sub_count(self, count):
+        def replace(match):
+            return ("%0" + str(len(match.group())) + "i") % count
+
+        return replace
+
     # ---------------------------------------------------------------------------
 
     # Property: last_child
@@ -772,6 +781,9 @@ class Element:
     # Property: closing_tag
     # (String or None) The closing tag
     closing_tag = None
+
+    count_pattern = re.compile('&+')
+    local_count_pattern = re.compile(r'(?<!\{)\$+')
 
     text = ''
     depth = -1
