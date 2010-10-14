@@ -1,14 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-version = "0.1.3"
+VERSION = "0.1.3"
 
-import os
-import fileinput
 import getopt
 import sys
 import re
 
-# =============================================================================== 
+# ===============================================================================
 
 class Dialect:
     shortcuts = {}
@@ -37,7 +35,7 @@ class HtmlDialect(Dialect):
                 '<html lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' + 
+                '    ' + '<title></title>\n' +
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -50,7 +48,7 @@ class HtmlDialect(Dialect):
                 '<html lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' + 
+                '    ' + '<title></title>\n' +
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -63,7 +61,7 @@ class HtmlDialect(Dialect):
                 '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' + 
+                '    ' + '<title></title>\n' +
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -76,7 +74,7 @@ class HtmlDialect(Dialect):
                 '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' + 
+                '    ' + '<title></title>\n' +
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -89,7 +87,7 @@ class HtmlDialect(Dialect):
                 '<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />\n' +
-                '    ' + '<title></title>\n' + 
+                '    ' + '<title></title>\n' +
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -102,7 +100,7 @@ class HtmlDialect(Dialect):
                 '<html lang="en">\n' +
                 '<head>\n' +
                 '    ' + '<meta charset="UTF-8" />\n' +
-                '    ' + '<title></title>\n' + 
+                '    ' + '<title></title>\n' +
                 '</head>\n' +
                 '<body>',
             'closing_tag':
@@ -278,7 +276,7 @@ class Parser:
     """
 
     # Constructor
-    # --------------------------------------------------------------------------- 
+    # ---------------------------------------------------------------------------
 
     def __init__(self, options=None, str='', dialect=HtmlDialect()):
         """Constructor.
@@ -296,8 +294,8 @@ class Parser:
         self._tokenize()
         self._parse()
 
-    # Methods 
-    # --------------------------------------------------------------------------- 
+    # Methods
+    # ---------------------------------------------------------------------------
 
     def load_string(self, str):
         """Loads a string to parse.
@@ -349,7 +347,10 @@ class Parser:
                     newv.append(indents * newindent + stripped)
                 shortcut[k] = '\n'.join(newv)
 
-        indent = ' ' * self.options.indent_spaces
+        try:    spaces_count = int(self.parser.options.options['indent-spaces'])
+        except: spaces_count = 4
+        indent = ' ' * spaces_count
+
         shortcuts = self.dialect.shortcuts
         for name, shortcut in shortcuts.iteritems():
             if shortcut is None:
@@ -362,17 +363,17 @@ class Parser:
 
         matches = re.findall(r'(></)|("")|(\n\s+)\n|(.|\s)', output)
         output = ''
-        n = 1
+        placeholder_count = 1
         for i in matches:
             if i[0]:
-                output += '>$%i</' % n
-                n += 1
+                output += '>$%i</' % placeholder_count
+                placeholder_count += 1
             elif i[1]:
-                output += '"$%i"' % n
-                n += 1
+                output += '"$%i"' % placeholder_count
+                placeholder_count += 1
             elif i[2]:
-                output += i[2] + '$%i\n' % n
-                n += 1
+                output += i[2] + '$%i\n' % placeholder_count
+                placeholder_count += 1
             elif i[3]:
                 output += i[3]
         output += "$0"
@@ -452,7 +453,7 @@ class Parser:
         return
 
     # Properties
-    # --------------------------------------------------------------------------- 
+    # ---------------------------------------------------------------------------
 
     # Property: dialect
     # The dialect of XML
@@ -472,7 +473,7 @@ class Parser:
 
     # Property: root
     # The root [[Element]] node.
-    root = None 
+    root = None
 
     # Property: caret
     # The current insertion point.
@@ -498,7 +499,7 @@ class Parser:
     suffix = ''
     pass
 
-# =============================================================================== 
+# ===============================================================================
 
 class Element:
     """An element.
@@ -575,7 +576,7 @@ class Element:
         except: spaces_count = 4
         spaces = ' ' * spaces_count
         indent = self.depth * spaces
-        
+
         prefix, suffix = ('', '')
         if self.prefix: prefix = self.prefix + "\n"
         if self.suffix: suffix = self.suffix
@@ -644,10 +645,10 @@ class Element:
                          output + \
                          indent + self.get_closing_tag() + \
                          guide + end_guide + "\n"
-            
+
 
         # Short, self-closing tags (<br />)
-        elif self.name in short_tags: 
+        elif self.name in short_tags:
             output = "%s<%s />\n" % (indent, self.get_default_tag())
 
         # Tags with text, possibly
@@ -822,7 +823,7 @@ class Element:
     prefix = None
     suffix = None
 
-# =============================================================================== 
+# ===============================================================================
 
 class Token:
     def __init__(self, str, parser=None):
@@ -850,7 +851,7 @@ class Token:
         else:
             self.type = Token.ELEMENT
             self._init_element()
-        
+
     def _init_element(self):
         """Initializes. Only called if the token is an element token.
         [Private]
@@ -930,7 +931,7 @@ class Token:
             if '!' in flags: self.expand = True
 
     def __str__(self):
-        return self.str 
+        return self.str
 
     str = ''
     parser = None
@@ -948,25 +949,25 @@ class Token:
 
     # Type
     type = 0
-    ELEMENT = 2 
+    ELEMENT = 2
     CHILD = 4
     PARENT = 8
     SIBLING = 16
 
-# =============================================================================== 
+# ===============================================================================
 
 class Router:
     """The router.
     """
 
-    # Constructor 
-    # --------------------------------------------------------------------------- 
+    # Constructor
+    # ---------------------------------------------------------------------------
 
     def __init__(self):
         pass
 
-    # Methods 
-    # --------------------------------------------------------------------------- 
+    # Methods
+    # ---------------------------------------------------------------------------
 
     def start(self, options=None, str=None, ret=None):
         if (options):
@@ -982,13 +983,13 @@ class Router:
 
         else:
             return self.parse(str=str, ret=ret)
-    
+
     def help(self):
         print "Usage: %s [OPTIONS]" % sys.argv[0]
         print "Expands input into HTML."
         print ""
         for short, long, info in self.options.cmdline_keys:
-            if "Deprecated" in info: continue 
+            if "Deprecated" in info: continue
             if not short == '': short = '-%s,' % short
             if not long  == '': long  = '--%s' % long.replace("=", "=XXX")
 
@@ -1003,8 +1004,6 @@ class Router:
         self.parser = Parser(self.options)
 
         try:
-            # Read the files
-            # for line in fileinput.input(): lines.append(line.rstrip(os.linesep))
             if str is not None:
                 lines = str
             else:
@@ -1017,7 +1016,7 @@ class Router:
         except:
             sys.stderr.write("Reading failed.\n")
             return
-            
+
         try:
             self.parser.load_string(lines)
             output = self.parser.render()
@@ -1036,7 +1035,7 @@ class Router:
         "Please refer to the manual for more information.",
     ]
 
-# =============================================================================== 
+# ===============================================================================
 
 class Options:
     def __init__(self, router, argv, options=None):
@@ -1045,8 +1044,8 @@ class Options:
 
         # `options` can be given as a dict of stuff to preload
         if options:
-            for k, v in options.iteritems():
-                self.options[k] = v
+            for key, value in options.iteritems():
+                self.options[key] = value
             return
 
         # Prepare for getopt()
@@ -1084,8 +1083,8 @@ class Options:
                         options[long] = True
 
         # Done
-        for k, v in options.iteritems():
-            self.options[k] = v
+        for key, value in options.iteritems():
+            self.options[key] = value
 
     def __getattr__(self, attr):
         return self.get(attr)
@@ -1113,13 +1112,14 @@ class Options:
         ('', 'start-guide-format=', 'To be documented'),
         ('', 'end-guide-format=', 'To be documented'),
     ]
-    
+
     # Property: router
     # Router
     router = 1
 
-# =============================================================================== 
+# ===============================================================================
 
 if __name__ == "__main__":
-    z = Router()
-    z.start()
+    router = Router()
+    router.start()
+
